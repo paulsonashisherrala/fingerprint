@@ -1,0 +1,12 @@
+var sheet_id = "google sheet id";  // replace google sheet id  example : "https://docs.google.com/spreadsheets/d/ 1-ZEuA21OnD5EC9pM8Hi2f7gRQ-ubl28p /edit#gid=17634552" in this url 1-ZEuA21OnD5EC9pM8Hi2f7gRQ-ubl28p is google sheet ID.
+var sheet_name = "Sheet name "; // replace the Sheet name example Sheet1 or sheet2 or Any Specific Name you give that sheet.
+function doGet(e){
+var ss = SpreadsheetApp.openById(sheet_id);
+var sheet = ss.getSheetByName(sheet_name);
+var Fingureprint = Number(e.parameter.sensor);
+// var date = String(e.parameter.date);
+var date = Utilities.formatDate(new Date(), "GMT+5:30", "yyyy-MM-dd");
+ var date1 = new Date();
+var period = date1.toLocaleTimeString();
+sheet.appendRow([Fingureprint,date,period]);
+}

@@ -1,0 +1,107 @@
+
+#include"Arduino.h"
+#include <Adafruit_Fingerprint.h>
+#include <HardwareSerial.h>
+#include "WiFi.h"
+#include <HTTPClient.h>
+const char* ssid = "IITH-Guest-PWD-IITH@2022";         // change SSID
+const char* password = "IITH@2022";    // change password
+// Google script ID and required credentials
+// https://script.google.com/macros/s/AKfycbypn21FYqH8WCA36dKI-w3c_GCn-9aNRku1JbsW55I77EX3LEIDREHgcPof0DptEuKT/exec
+//https://script.google.com/macros/s/AKfycbwAV85c1KkQ0eXvcJEekNSppgUFi--MvRZ3xaN8iu6OuKrwwW0wXSUNENzmO4ylbTiO/exec
+
+// For Fwc B423 Aug Batch ....
+
+String GOOGLE_SCRIPT_ID = "AKfycbwAV85c1KkQ0eXvcJEekNSppgUFi--MvRZ3xaN8iu6OuKrwwW0wXSUNENzmO4ylbTiO";    // change Gscript ID
+
+HardwareSerial hw(2);
+Adafruit_Fingerprint finger = Adafruit_Fingerprint(&hw);
+
+void wifi_init()
+{
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+  while (WiFi.waitForConnectResult() != WL_CONNECTED) 
+  {
+    delay(5000);
+   // ESP.restart();
+  }
+}
+
+int getFingerprintIDez() {
+  uint8_t p = finger.getImage();
+  if (p != FINGERPRINT_OK)  return -1;
+
+  p = finger.image2Tz();
+  if (p != FINGERPRINT_OK)  return -1;
+
+  p = finger.fingerFastSearch();
+  if (p != FINGERPRINT_OK)  return -1;
+  
+  // found a match!
+  Serial.print("Found ID #"); Serial.print(finger.fingerID); 
+  Serial.print(" with confidence of "); Serial.println(finger.confidence);
+  return finger.fingerID; 
+}
+
+
+void setup()
+{
+   Serial.begin(9600);
+   while (!Serial);  // For Yun/Leo/Micro/Zero/...
+   delay(100);
+   Serial.println("\n\nAdafruit finger detect test");
+
+
+   finger.begin(57600); 
+  
+    if (finger.verifyPassword()) {
+    Serial.println("Found fingerprint sensor!");
+    } 
+    else 
+    {
+    Serial.println("Did not find fingerprint sensor :(");
+    while (1) { delay(1); }
+    }
+    finger.getTemplateCount();
+    Serial.print("Sensor contains ");     
+    Serial.print(finger.templateCount); Serial.println(" templates");
+    Serial.println("Waiting for valid finger...");
+  
+     wifi_init();
+}
+
+void loop()
+  {
+  
+    int  fp = getFingerprintIDez();
+    Serial.print("fp Id is :");
+    
+    Serial.println(fp);
+
+    delay(50);
+    
+    if(fp != -1)
+  {
+    String urlFinal = "https://script.google.com/macros/s/"+GOOGLE_SCRIPT_ID+"/exec?"+ "&sensor=" + fp;
+    Serial.print("POST data to spreadsheet:");
+    Serial.println(urlFinal);
+    HTTPClient http;
+    http.begin(urlFinal.c_str());
+    http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
+    int httpCode = http.GET(); 
+    Serial.print("HTTP Status Code: ");
+    Serial.println(httpCode);
+    
+    //---------------------------------------------------------------------
+    //getting response from google sheet
+    String payload;
+    
+    if (httpCode > 0) {
+        payload = http.getString();
+        Serial.println("Payload: "+payload);    
+    }    
+    //---------------------------------------------------------------------
+    http.end();
+  }
+  }
